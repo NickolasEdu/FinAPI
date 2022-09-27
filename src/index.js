@@ -57,15 +57,47 @@ app.post('/account', (req, res) => {
 })
 
 app.get('/account', cpfVerifyAccount, (req, res) => {
-    const { custumer } = req
+    const { customer } = req
 
-    return res.json({ msg: custumer })
+    return res.json(customer)
+})
+
+app.put('/account', cpfVerifyAccount, (req, res) => {
+    const { name } = req.body
+    const { customer } = req
+
+    customer.name = name
+
+    return res.status(201).json({ msg: "ok" })
+})
+
+app.delete('/account', cpfVerifyAccount, (req, res) => {
+    const { customer } = req
+
+    customers.splice(customer, 1)
+
+    return res.status(200).json(customers)
 })
 
 app.get('/statement', cpfVerifyAccount, (req, res) => {
     const { customer } = req
 
     return res.json(customer)
+})
+
+app.get('/statement/date', cpfVerifyAccount, (req, res) => {
+    const { customer } = req
+    const { date } = req.query
+
+    const dateFormat = new Date(date + " 00:00")
+
+    const statement = customer.statement.filter(
+        (statement) =>
+            statement.createAt.toDateString() ===
+            new Date(dateFormat).toDateString()
+    )
+
+    return res.json(statement)
 })
 
 app.post('/deposit', cpfVerifyAccount, (req, res) => {
@@ -101,34 +133,10 @@ app.post('/withdraw', cpfVerifyAccount, (req, res) => {
     return res.status(201).json( {msg: "Saque concluído"})
 })
 
-app.get('/statement/date', cpfVerifyAccount, (req, res) => {
-    const { customer } = req
-    const { date } = req.query
-
-    const dateFormat = new Date(date + " 00:00")
-
-    const statement = customer.statement.filter(
-        (statement) =>
-            statement.createAt.toDateString() ===
-            new Date(dateFormat).toDateString()
-    )
-
-    return res.json(statement)
-})
-
-app.put('/account', cpfVerifyAccount, (req, res) => {
-    const { name } = req.body
+app.get('/balance', cpfVerifyAccount, (req, res) => {
     const { customer } = req
 
-    customer.name = name
+    const balance = getBalance(customer.statement)
 
-    return res.status(201).json({ msg: "ok" })
-})
-
-app.delete('/account', cpfVerifyAccount, (req, res) => {
-    const { custumer } = req
-
-    custumer.splice(custumer, 1)
-
-    return response.status(200).json(customers)
+    return res.json(balance)
 })
