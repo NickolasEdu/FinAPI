@@ -25,12 +25,14 @@ function cpfVerifyAccount(req, res, next) {
 
 function getBalance(statement) {
     const balance = statement.reduce((acc, operation) => {
-        if (operation.type === 'debit') {
+        if (operation.type === 'credit') {
             return acc + operation.amount
         } else {
-            return acc - operation.amount
+            return acc - operation.amount   
         }
     }, 0)
+
+    return balance
 }
 
 // Cadastro via body params que bloqueia caso o CPF já exista. Respondendo status diferentes em cada caso.
@@ -51,13 +53,19 @@ app.post('/account', (req, res) => {
         statement: [],
     })
 
-    return res.status(201).send()
+    return res.status(201).json({ msg: name})
+})
+
+app.get('/account', cpfVerifyAccount, (req, res) => {
+    const { custumer } = req
+
+    return res.json({ msg: custumer })
 })
 
 app.get('/statement', cpfVerifyAccount, (req, res) => {
     const { customer } = req
 
-    return res.json(customer.statement)
+    return res.json(customer)
 })
 
 app.post('/deposit', cpfVerifyAccount, (req, res) => {
@@ -67,7 +75,7 @@ app.post('/deposit', cpfVerifyAccount, (req, res) => {
         description,
         amount,
         createAt: new Date(),
-        type: "credit"
+        type: "credit",
     }
 
     customer.statement.push(statementOperation)
@@ -77,18 +85,50 @@ app.post('/deposit', cpfVerifyAccount, (req, res) => {
 app.post('/withdraw', cpfVerifyAccount, (req, res) => {
     const { amount } = req.body
     const { customer } = req
-    const balance  = getBalance(customer.statement)
+    const balance = getBalance(customer.statement)
 
-    if (balance < amount) {
-        return res.status(400).json({ error: "The funds are insufficient"})
+    if (amount > balance) {
+        return res.status(400).json({ error: "The funds are insufficient" })
     }
 
     const statementOperation = {
         amount,
         createAt: new Date(),
-        type: "debit"
+        type: "debit",
     }
 
     customer.statement.push(statementOperation)
-    return res.status(201).send()
+    return res.status(201).json( {msg: "Saque concluído"})
+})
+
+app.get('/statement/date', cpfVerifyAccount, (req, res) => {
+    const { customer } = req
+    const { date } = req.query
+
+    const dateFormat = new Date(date + " 00:00")
+
+    const statement = customer.statement.filter(
+        (statement) =>
+            statement.createAt.toDateString() ===
+            new Date(dateFormat).toDateString()
+    )
+
+    return res.json(statement)
+})
+
+app.put('/account', cpfVerifyAccount, (req, res) => {
+    const { name } = req.body
+    const { customer } = req
+
+    customer.name = name
+
+    return res.status(201).json({ msg: "ok" })
+})
+
+app.delete('/account', cpfVerifyAccount, (req, res) => {
+    const { custumer } = req
+
+    custumer.splice(custumer, 1)
+
+    return response.status(200).json(customers)
 })
